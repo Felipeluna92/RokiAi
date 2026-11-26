@@ -43,6 +43,7 @@ e, depois de fechar, sabe exatamente quanto recebe por mês e quem está devendo
 - Qualquer automação que arrisque banimento do WhatsApp dele (disparo em massa).
 - Abordar a mesma empresa duas vezes por não lembrar que já foi contatada.
 - Gastar dinheiro com a API do Google sem ele perceber (buscas repetidas sem necessidade).
+- Descumprir de forma grosseira os termos do Google Maps (guardar resultados em massa).
 - Perder dados de clientes/cobranças.
 
 ## 3. Restrições
@@ -109,11 +110,19 @@ Filtro padrão mostra *Sem site* + *Só rede social*; um toggle mostra todos.
 
 Faixas: **Alto** ≥ 65, **Médio** 40–64, **Baixo** < 40. Ordenação padrão por nota.
 
-**Cache e deduplicação:** todo lugar retornado é gravado/atualizado na tabela `places`
-(chave `google_place_id`). Na lista, cada resultado mostra selo se já é **Lead** (com o
-estágio), **Cliente** ou **Ignorado**. Buscas iguais (mesma cidade + categoria) feitas nas
-últimas 24 h mostram o resultado salvo com aviso "resultado de <hora> — buscar de novo?",
-para não pagar a API à toa.
+**Armazenamento e deduplicação (opção B, escolhida pelo dono).** Os termos do Google Maps
+só permitem guardar o `place_id` por tempo indeterminado. Por isso:
+- Os resultados da busca **não ficam salvos no banco**. Ficam só na sessão do navegador
+  (estado da página e `sessionStorage`), para que voltar à tela não refaça a busca.
+- Do banco, a busca usa só o `place_id`: a tabela `place_marks` guarda os ignorados, e
+  `leads.google_place_id` marca o que já é lead. Na lista, cada resultado mostra um selo se
+  já é **Lead** (com o estágio), **Cliente** ou **Ignorado**.
+- Ao **salvar como lead**, o sistema copia para o lead apenas **nome da empresa e
+  telefone**, além de cidade e categoria, que são dados que o próprio dono digitou na busca.
+  Esses dados viram contatos do funil dele. Nota, avaliações, endereço e site não são
+  copiados.
+- No detalhe do lead, o botão **"Ver no Google"** abre o Maps pelo `place_id`
+  (`https://www.google.com/maps/place/?q=place_id:<id>`), sem custo de API.
 
 **Ações por resultado:** "Salvar como lead", "Ignorar" (some das próximas buscas),
 abrir no Google Maps. Seleção múltipla para salvar vários de uma vez.
@@ -135,8 +144,9 @@ Estágios: **Novo → Contatado → Proposta enviada → Fechado | Perdido**.
 - Ao mover para **Fechado**, abre o formulário de conversão em cliente (6.4).
 
 **Modelos de mensagem** (tela de configurações): texto com variáveis
-`{nome_empresa}`, `{cidade}`, `{nota}`, `{avaliacoes}`, `{categoria}`, `{valor}`,
-`{vencimento}`, `{chave_pix}`. Tipos: abordagem, follow-up, cobrança. Vêm 3 modelos
+`{nome_empresa}`, `{cidade}`, `{categoria}`, `{responsavel}`, `{valor}`,
+`{vencimento}`, `{chave_pix}`. Nota e avaliações ficam de fora, porque não são guardadas
+(opção B). Tipos: abordagem, follow-up, cobrança. Vêm 3 modelos
 iniciais editáveis.
 
 ### 6.4 Clientes
@@ -209,14 +219,11 @@ Gráficos/listas:
 
 - `settings` (1 linha por dono): business_name, pix_key, default_setup_price,
   default_monthly_price.
-- `searches`: city, category, query, results_count, created_at.
-- `places`: google_place_id (unique), name, address, city, category, phone,
-  phone_is_mobile, website_uri, site_status (`none|social|has_site`), rating,
-  ratings_count, business_status, maps_url, lat, lng, potential_score, ignored, raw (jsonb),
-  first_seen_at, updated_at.
-- `search_results`: search_id, place_id, position.
-- `leads`: place_id (nullable, unique quando presente), name, phone, city, category, stage,
-  next_contact_at, lost_reason, contacted_at, created_at, updated_at.
+- `api_usage`: month, requests (contador de chamadas ao Google por mês).
+- `place_marks`: google_place_id (unique por dono), status (`ignored`), created_at.
+- `leads`: google_place_id (nullable, unique quando presente), name, phone,
+  phone_is_mobile, city, category, source (`google|manual`), stage, next_contact_at,
+  lost_reason, contacted_at, created_at, updated_at.
 - `lead_events`: lead_id, type (`note|stage_change|whatsapp`), body, created_at.
 - `message_templates`: kind (`approach|followup|charge`), name, body.
 - `clients`: lead_id (nullable), company, contact_name, phone, email, city, site_url,
