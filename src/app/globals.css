@@ -22,3 +22,23 @@ body {
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
+
+/* Tokens de gráficos (paleta de referência validada; escuro com degraus próprios) */
+:root {
+  --series-1: #257de0;
+  --series-2: #f47230;
+  --viz-surface: #ffffff;
+  --viz-grid: #ececec;
+  --viz-axis: #737373;
+  --viz-hover: rgba(0, 0, 0, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --series-1: #338ced;
+    --series-2: #e76624;
+    --viz-surface: #18181b;
+    --viz-grid: #2a2a2e;
+    --viz-axis: #a1a1aa;
+    --viz-hover: rgba(255, 255, 255, 0.06);
+  }
+}
