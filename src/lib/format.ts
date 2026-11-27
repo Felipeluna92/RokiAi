@@ -26,3 +26,12 @@ export function todayInSaoPaulo(now: Date = new Date()): string {
 export function monthKey(iso: string): string {
   return iso.slice(0, 7)
 }
+
+/** `55DDDNÚMERO` → `(DD) 99999-9999` */
+export function formatPhoneDigits(digits?: string | null): string {
+  if (!digits) return ''
+  const d = digits.startsWith('55') && digits.length >= 12 ? digits.slice(2) : digits
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return digits
+}

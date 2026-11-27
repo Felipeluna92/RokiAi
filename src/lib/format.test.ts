@@ -16,3 +16,12 @@ describe('format', () => {
     expect(monthKey('2026-03-31')).toBe('2026-03')
   })
 })
+
+import { formatPhoneDigits } from './format'
+describe('formatPhoneDigits', () => {
+  it('celular e fixo', () => {
+    expect(formatPhoneDigits('5519999998888')).toBe('(19) 99999-8888')
+    expect(formatPhoneDigits('551932321234')).toBe('(19) 3232-1234')
+  })
+  it('vazio', () => expect(formatPhoneDigits(null)).toBe(''))
+})
