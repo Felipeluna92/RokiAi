@@ -48,8 +48,10 @@ export function ProspectClient({ initialUsage, alertAt, pricePerRequest }: { ini
   const [pending, startTransition] = useTransition()
   const [loadingMore, setLoadingMore] = useState(false)
 
-  // restaura cidade e a última busca da sessão (resultados não vão para o banco)
+  // restaura cidade e a última busca da sessão (resultados não vão para o banco).
+  // sessionStorage só existe no navegador, então a leitura precisa acontecer após montar.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     try {
       const savedCity = localStorage.getItem(CITY_KEY)
       if (savedCity) setCity(savedCity)
@@ -62,6 +64,7 @@ export function ProspectClient({ initialUsage, alertAt, pricePerRequest }: { ini
         marksForAction(s.results.map((r) => r.placeId)).then(setMarks)
       }
     } catch {}
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
 
   function persist(s: Stored) {
