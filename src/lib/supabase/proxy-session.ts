@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/api/cron']
+const PUBLIC_PATHS = ['/login', '/cadastro', '/api/cron']
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -28,7 +28,7 @@ export async function updateSession(request: NextRequest) {
     url.search = ''
     return NextResponse.redirect(url)
   }
-  if (data?.claims && path === '/login') {
+  if (data?.claims && (path === '/login' || path === '/cadastro')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

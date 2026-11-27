@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RokiAi
 
-## Getting Started
+Ferramenta interna para vender sites a comércios locais:
 
-First, run the development server:
+- **Prospectar** — busca comércios de uma cidade no Google Maps (Places API), mostra quem **não tem site** (ou só tem rede social) e dá uma nota de potencial.
+- **Leads** — funil (Novo → Contatado → Proposta → Fechado/Perdido), anotações, próximo contato e botão de **WhatsApp** com mensagem pronta.
+- **Clientes e cobranças** — implantação (à vista ou parcelada) + mensalidade, geração automática das mensalidades, baixa manual de pagamento (Pix) e cobrança pelo WhatsApp.
+- **Dashboard** — MRR, recebido no mês, a receber, atrasados, gráficos de 12 meses e funil.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Stack: Next.js 16 · Supabase (Postgres + Auth) · Vercel.
+
+## Primeiro acesso
+
+O cadastro só aceita e-mails autorizados. Para autorizar o seu, rode no **SQL Editor** do Supabase:
+
+```sql
+insert into private.allowed_emails (email) values ('seu-email@exemplo.com');
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Depois abra o site, clique em **Criar conta** e cadastre a senha. (O Supabase pode mandar um e-mail de confirmação — pode ignorar, a conta já fica ativa.)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Chave do Google (Places API)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. No [Google Cloud Console](https://console.cloud.google.com/), ative a **Places API (New)** no projeto da sua chave.
+2. Em *APIs e serviços → Credenciais*, restrinja a chave à **Places API (New)**.
+3. Na Vercel: *Project → Settings → Environment Variables* → adicione `GOOGLE_PLACES_API_KEY` (Production) e faça um *Redeploy*.
+4. Recomendado: em *Faturamento → Orçamentos e alertas* crie um alerta de orçamento, e em *Cotas* limite as requisições diárias da Places API.
 
-## Learn More
+Cada página de 20 resultados é 1 requisição. O app conta as buscas do mês em **Configurações** e avisa a partir do limite que você definir.
 
-To learn more about Next.js, take a look at the following resources:
+## Variáveis de ambiente
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variável | Onde |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | chave publicável (anon) do Supabase |
+| `GOOGLE_PLACES_API_KEY` | chave da Places API — **só no servidor, nunca commitar** |
+| `CRON_SECRET` | segredo da rota `/api/cron/charges` (a Vercel envia automaticamente) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Rodar localmente
 
-## Deploy on Vercel
+```bash
+npm install
+cp .env.example .env.local   # preencha os valores
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Testes: `npm test` (regras de negócio) e `npm run e2e` (ponta a ponta; precisa de `E2E_EMAIL`/`E2E_PASSWORD` de um usuário de teste no `.env.local`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Banco de dados
+
+As migrações ficam em `supabase/migrations/` e já estão aplicadas no projeto. Todas as tabelas usam RLS: cada linha pertence ao usuário logado.
+
+## Backup
+
+Em **Configurações → Backup dos dados** você baixa tudo em JSON e as cobranças em CSV. O plano gratuito do Supabase não tem backup restaurável — baixe de vez em quando.
+
+## Cron
+
+A Vercel chama `/api/cron/charges` uma vez por dia para manter o banco ativo (o plano gratuito do Supabase pausa projetos parados). As mensalidades são geradas automaticamente sempre que você abre o painel, clientes ou cobranças.
