@@ -5,7 +5,7 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
 import { monthKey, todayInSaoPaulo } from '@/lib/format'
 import type { MessageTemplate, Settings } from '@/lib/types'
-import { SettingsForm, Templates } from './settings-forms'
+import { PasswordForm, SettingsForm, Templates } from './settings-forms'
 
 export const metadata = { title: 'Configurações · RokiAi' }
 
@@ -24,6 +24,11 @@ export default async function SettingsPage() {
       <Card>
         <CardTitle className="mb-3">Seu negócio</CardTitle>
         <SettingsForm settings={s} />
+      </Card>
+
+      <Card>
+        <CardTitle className="mb-3">Trocar senha</CardTitle>
+        <PasswordForm />
       </Card>
 
       <Card>

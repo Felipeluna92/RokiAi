@@ -1,5 +1,5 @@
 'use client'
-import { useActionState, useEffect, useState, useTransition } from 'react'
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Plus, Trash2 } from 'lucide-react'
@@ -9,7 +9,7 @@ import { Input, Label, Textarea } from '@/components/ui/input'
 import { toInputBRL } from '@/lib/format'
 import { TEMPLATE_KIND_LABEL, type TemplateKind } from '@/lib/messages'
 import type { MessageTemplate, Settings } from '@/lib/types'
-import { createTemplateAction, deleteTemplateAction, saveSettingsAction, saveTemplateAction } from './actions'
+import { changePasswordAction, createTemplateAction, deleteTemplateAction, saveSettingsAction, saveTemplateAction } from './actions'
 
 export function SettingsForm({ settings }: { settings: Settings }) {
   const [state, action, pending] = useActionState(saveSettingsAction, undefined)
@@ -126,5 +126,36 @@ export function Templates({ templates }: { templates: MessageTemplate[] }) {
         ))}
       </div>
     </div>
+  )
+}
+
+export function PasswordForm() {
+  const [state, action, pending] = useActionState(changePasswordAction, undefined)
+  const formRef = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (state?.ok) {
+      toast.success('Senha alterada')
+      formRef.current?.reset()
+    }
+  }, [state])
+  return (
+    <form ref={formRef} action={action} className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <div>
+        <Label htmlFor="new-password">Nova senha</Label>
+        <Input id="new-password" name="password" type="password" autoComplete="new-password" required />
+      </div>
+      <div>
+        <Label htmlFor="confirm-password">Repita a nova senha</Label>
+        <Input id="confirm-password" name="confirm" type="password" autoComplete="new-password" required />
+      </div>
+      <Button type="submit" variant="outline" disabled={pending}>
+        Trocar senha
+      </Button>
+      {state?.error && (
+        <p role="alert" className="text-sm text-red-600 sm:col-span-3">
+          {state.error}
+        </p>
+      )}
+    </form>
   )
 }

@@ -49,3 +49,17 @@ export async function deleteTemplateAction(id: string) {
   await supabase.from('message_templates').delete().eq('id', id)
   revalidatePath('/configuracoes')
 }
+
+export async function changePasswordAction(_prev: { ok?: boolean; error?: string } | undefined, form: FormData) {
+  const { supabase } = await requireUser()
+  const password = String(form.get('password') ?? '')
+  const confirm = String(form.get('confirm') ?? '')
+  if (password.length < 8) return { error: 'A senha precisa ter pelo menos 8 caracteres' }
+  if (password !== confirm) return { error: 'As senhas não conferem' }
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) {
+    if (/different from the old/i.test(error.message)) return { error: 'A nova senha precisa ser diferente da atual' }
+    return { error: 'Não foi possível trocar a senha' }
+  }
+  return { ok: true }
+}
