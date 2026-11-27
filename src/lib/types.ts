@@ -9,6 +9,7 @@ export type Settings = {
   default_monthly_price: number | null
   google_price_per_request: number
   google_monthly_alert: number
+  apify_monthly_alert_usd: number
 }
 
 export type Lead = {

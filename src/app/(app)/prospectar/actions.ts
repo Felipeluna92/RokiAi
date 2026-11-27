@@ -2,17 +2,45 @@
 import { requireUser } from '@/lib/auth'
 import { monthKey, todayInSaoPaulo } from '@/lib/format'
 import { PlacesError, searchPlaces, type ProspectResult } from '@/lib/prospect/places'
+import { APIFY_MAX_PLACES, ApifyError, abortApifyRun, getApifyRun, startApifySearch } from '@/lib/prospect/apify'
 import type { Stage } from '@/lib/billing/metrics'
 
 export type SearchResponse =
   | { ok: true; results: ProspectResult[]; nextPageToken?: string; usage: number }
+  | { ok: true; pending: string }
   | { ok: false; error: string; usage?: number }
 
-export async function searchAction(city: string, category: string, pageToken?: string): Promise<SearchResponse> {
+export type Provider = 'apify' | 'google' | 'none'
+
+/** Apify é a fonte principal; o Google entra se só a chave dele existir. */
+export async function currentProvider(): Promise<Provider> {
+  if (process.env.APIFY_TOKEN) return 'apify'
+  if (process.env.GOOGLE_PLACES_API_KEY) return 'google'
+  return 'none'
+}
+
+export async function searchAction(city: string, category: string, pageToken?: string, max = 50): Promise<SearchResponse> {
   const { supabase } = await requireUser()
   const c = city.trim()
   const cat = category.trim()
   if (!c || !cat) return { ok: false, error: 'Informe a cidade e a categoria.' }
+
+  if ((await currentProvider()) === 'apify') {
+    try {
+      const { runId } = await startApifySearch({ city: c, category: cat, max })
+      const { error } = await supabase
+        .from('apify_runs')
+        .insert({ run_id: runId, city: c, category: cat, max_places: Math.min(APIFY_MAX_PLACES, Math.max(1, Math.floor(max))) })
+      if (error) {
+        await abortApifyRun(runId).catch(() => {})
+        return { ok: false, error: 'Não foi possível registrar a busca.' }
+      }
+      return { ok: true, pending: runId }
+    } catch (e) {
+      if (e instanceof ApifyError) return { ok: false, error: e.message }
+      throw e
+    }
+  }
   const hasKey = Boolean(process.env.GOOGLE_PLACES_API_KEY)
   let usage: number | undefined
   if (hasKey) {
@@ -81,4 +109,43 @@ export async function ignorePlaceAction(placeId: string, ignore: boolean) {
   } else {
     await supabase.from('place_marks').delete().eq('google_place_id', placeId)
   }
+}
+
+export type PollResponse =
+  | { status: 'running'; startedAt: string }
+  | { status: 'succeeded'; results: ProspectResult[]; city: string; category: string; scraped: number; costUsd: number | null }
+  | { status: 'failed'; error: string }
+
+/** Consulta uma busca da Apify do próprio usuário (RLS garante a posse). */
+export async function pollApifyAction(runId: string): Promise<PollResponse> {
+  const { supabase } = await requireUser()
+  const { data: run } = await supabase.from('apify_runs').select('*').eq('run_id', runId).maybeSingle()
+  if (!run) return { status: 'failed', error: 'Busca não encontrada.' }
+  if (run.status === 'aborted') return { status: 'failed', error: 'Busca cancelada.' }
+  try {
+    const state = await getApifyRun(runId)
+    if (state.status === 'running') return { status: 'running', startedAt: run.created_at }
+    if (state.status === 'failed') {
+      if (run.status === 'running')
+        await supabase.from('apify_runs').update({ status: 'failed', error: state.error, finished_at: new Date().toISOString() }).eq('run_id', runId)
+      return state
+    }
+    if (run.status === 'running')
+      await supabase
+        .from('apify_runs')
+        .update({ status: 'succeeded', scraped: state.scraped, cost_usd: state.costUsd, finished_at: new Date().toISOString() })
+        .eq('run_id', runId)
+    return { status: 'succeeded', results: state.results, city: run.city, category: run.category, scraped: state.scraped, costUsd: state.costUsd }
+  } catch (e) {
+    if (e instanceof ApifyError) return { status: 'failed', error: e.message }
+    throw e
+  }
+}
+
+export async function abortApifyAction(runId: string) {
+  const { supabase } = await requireUser()
+  const { data: run } = await supabase.from('apify_runs').select('status').eq('run_id', runId).maybeSingle()
+  if (!run || run.status !== 'running') return
+  await abortApifyRun(runId).catch(() => {})
+  await supabase.from('apify_runs').update({ status: 'aborted', finished_at: new Date().toISOString() }).eq('run_id', runId)
 }

@@ -23,6 +23,7 @@ export async function saveSettingsAction(_prev: { ok?: boolean; error?: string }
       default_monthly_price: money(form.get('default_monthly_price')),
       google_price_per_request: Number.isFinite(price) && price >= 0 ? price : 0.035,
       google_monthly_alert: Number.isFinite(alert) && alert > 0 ? alert : 1000,
+      apify_monthly_alert_usd: money(form.get('apify_monthly_alert_usd')) ?? 4.5,
     })
     .not('id', 'is', null)
   if (error) return { error: 'Não foi possível salvar.' }

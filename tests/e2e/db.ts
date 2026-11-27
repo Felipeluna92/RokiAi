@@ -12,7 +12,7 @@ export async function testDb() {
 
 export async function resetData() {
   const sb = await testDb()
-  for (const t of ['charges', 'clients', 'lead_events', 'leads', 'place_marks', 'api_usage']) {
+  for (const t of ['charges', 'clients', 'lead_events', 'leads', 'place_marks', 'api_usage', 'apify_runs']) {
     const { error } = await sb.from(t).delete().not('id', 'is', null)
     if (error) throw error
   }

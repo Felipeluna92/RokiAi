@@ -58,3 +58,8 @@ export function toInputBRL(n: number | string | null | undefined): string {
   if (n == null || n === '') return ''
   return Number(n).toFixed(2).replace('.', ',')
 }
+
+/** Instante de `minutes` minutos atrás, em ISO. */
+export function minutesAgoISO(minutes: number, now: Date = new Date()): string {
+  return new Date(now.getTime() - minutes * 60_000).toISOString()
+}

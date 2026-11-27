@@ -11,11 +11,16 @@ export const metadata = { title: 'Configurações · RokiAi' }
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
-  const [{ data: settings }, { data: templates }, { data: usage }] = await Promise.all([
+  const month = monthKey(todayInSaoPaulo())
+  const [{ data: settings }, { data: templates }, { data: usage }, { data: runs }] = await Promise.all([
     supabase.from('settings').select('*').maybeSingle(),
     supabase.from('message_templates').select('id, kind, name, body').order('kind').order('created_at'),
-    supabase.from('api_usage').select('requests').eq('month', monthKey(todayInSaoPaulo())).maybeSingle(),
+    supabase.from('api_usage').select('requests').eq('month', month).maybeSingle(),
+    supabase.from('apify_runs').select('scraped, cost_usd').gte('created_at', `${month}-01T03:00:00Z`),
   ])
+  const apifyRuns = runs ?? []
+  const apifyPlaces = apifyRuns.reduce((s, r) => s + (r.scraped ?? 0), 0)
+  const apifyCost = apifyRuns.reduce((s, r) => s + Number(r.cost_usd ?? 0), 0)
   const s = settings as Settings
   const requests = usage?.requests ?? 0
   return (
@@ -29,6 +34,18 @@ export default async function SettingsPage() {
       <Card>
         <CardTitle className="mb-3">Trocar senha</CardTitle>
         <PasswordForm />
+      </Card>
+
+      <Card>
+        <CardTitle>Apify neste mês</CardTitle>
+        <p data-testid="apify-usage" className="mt-1 text-sm">
+          <strong>{apifyRuns.length}</strong> {apifyRuns.length === 1 ? 'busca' : 'buscas'} · <strong>{apifyPlaces}</strong> comércios · gasto{' '}
+          <strong>US$ {apifyCost.toFixed(2)}</strong>
+        </p>
+        <p className="mt-1 text-xs text-zinc-500">
+          O Google Maps Scraper cobra a partir de US$ 4 por 1.000 comércios. O plano grátis da Apify dá cerca de US$ 5 por mês. Confira o saldo em
+          console.apify.com.
+        </p>
       </Card>
 
       <Card>

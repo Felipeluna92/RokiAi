@@ -23,7 +23,7 @@ test.beforeEach(async () => {
 })
 
 test('sem chave do Google mostra erro claro', async ({ page }) => {
-  test.skip(Boolean(process.env.GOOGLE_PLACES_API_KEY), 'chave configurada')
+  test.skip(Boolean(process.env.GOOGLE_PLACES_API_KEY || process.env.APIFY_TOKEN), 'fonte configurada')
   await login(page)
   await page.goto('/prospectar')
   await page.getByLabel('Cidade').fill('Campinas, SP')

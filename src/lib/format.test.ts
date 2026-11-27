@@ -53,3 +53,8 @@ describe('toInputBRL', () => {
     expect(toInputBRL(null)).toBe('')
   })
 })
+
+import { minutesAgoISO } from './format'
+describe('minutesAgoISO', () => {
+  it('subtrai minutos', () => expect(minutesAgoISO(20, new Date('2026-03-11T01:00:00Z'))).toBe('2026-03-11T00:40:00.000Z'))
+})

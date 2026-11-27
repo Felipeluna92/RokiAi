@@ -12,6 +12,20 @@ const SOCIAL_DOMAINS = [
   'ifood.com.br',
   'sites.google.com',
   'business.site',
+  // agendamento, links de bio e cardápios — não são site próprio
+  'cashbarber.com.br',
+  'agendaservico.com',
+  'booksy.com',
+  'trinks.com',
+  'beacons.ai',
+  'bio.link',
+  'wa.link',
+  'anota.ai',
+  'goomer.app',
+  'menudino.com',
+  'cardapioweb.com',
+  'aiqfome.com',
+  'avec.app',
 ]
 
 function matchesDomain(host: string, domain: string) {

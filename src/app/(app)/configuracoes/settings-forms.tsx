@@ -36,6 +36,10 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         <Input id="default_monthly_price" name="default_monthly_price" inputMode="decimal" defaultValue={toInputBRL(settings.default_monthly_price)} />
       </div>
       <div>
+        <Label htmlFor="apify_monthly_alert_usd">Avisar quando o gasto na Apify passar de (US$/mês)</Label>
+        <Input id="apify_monthly_alert_usd" name="apify_monthly_alert_usd" inputMode="decimal" defaultValue={toInputBRL(settings.apify_monthly_alert_usd)} />
+      </div>
+      <div>
         <Label htmlFor="google_price_per_request">Custo por busca no Google (US$)</Label>
         <Input id="google_price_per_request" name="google_price_per_request" inputMode="decimal" defaultValue={settings.google_price_per_request} />
       </div>

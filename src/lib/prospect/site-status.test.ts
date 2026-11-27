@@ -32,3 +32,17 @@ describe('classifySite', () => {
     expect(classifySite('not a url')).toBe('has_site')
   })
 })
+
+describe('classifySite — agendamento e cardápio contam como sem site próprio', () => {
+  it.each([
+    'https://cashbarber.com.br/oliveira',
+    'https://agendaservico.com/corteestilo',
+    'https://booksy.com/pt-br/123',
+    'https://www.trinks.com/salao-x',
+    'https://beacons.ai/x',
+    'https://bio.link/x',
+    'https://wa.link/abc',
+    'https://pedido.anota.ai/loja/x',
+    'https://www.goomer.app/x',
+  ])('%s → social', (u) => expect(classifySite(u)).toBe('social'))
+})
