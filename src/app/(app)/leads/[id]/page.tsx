@@ -5,6 +5,8 @@ import { Card, CardTitle } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
 import { formatPhoneDigits } from '@/lib/format'
 import type { Lead, LeadEvent, MessageTemplate } from '@/lib/types'
+import { Stars } from '@/components/stars'
+import { TIER_LABEL, tierOf } from '@/lib/prospect/score'
 import { LeadActions, NextContactForm, NoteForm, StageSelect, Timeline } from './lead-detail'
 
 export default async function LeadPage({ params }: PageProps<'/leads/[id]'>) {
@@ -36,6 +38,10 @@ export default async function LeadPage({ params }: PageProps<'/leads/[id]'>) {
         <div className="space-y-4">
           <Card className="space-y-3">
             <CardTitle>Contato</CardTitle>
+            <div data-testid="lead-rating" className="flex flex-wrap items-center gap-2">
+              <Stars rating={l.rating} count={l.ratings_count} />
+              {l.potential_score != null && <span className="text-sm text-zinc-500">· {TIER_LABEL[tierOf(l.potential_score)]} ({l.potential_score}/100)</span>}
+            </div>
             <p className="text-lg">{l.phone ? formatPhoneDigits(l.phone) : 'Sem telefone'}</p>
             {l.phone && !l.phone_is_mobile && (
               <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
@@ -43,7 +49,7 @@ export default async function LeadPage({ params }: PageProps<'/leads/[id]'>) {
               </p>
             )}
             <LeadActions
-              lead={{ id: l.id, phone: l.phone, name: l.name, city: l.city, category: l.category }}
+              lead={{ id: l.id, phone: l.phone, name: l.name, city: l.city, category: l.category, rating: l.rating, ratings_count: l.ratings_count }}
               templates={(templates ?? []) as MessageTemplate[]}
             />
             <div className="flex flex-wrap gap-3 text-sm">

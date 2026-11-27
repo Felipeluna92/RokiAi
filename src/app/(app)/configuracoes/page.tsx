@@ -62,7 +62,7 @@ export default async function SettingsPage() {
       <Card>
         <CardTitle className="mb-1">Modelos de mensagem</CardTitle>
         <p className="mb-3 text-xs text-zinc-500">
-          Variáveis: {'{nome_empresa} {cidade} {categoria} {responsavel} {valor} {vencimento} {chave_pix}'}. Na cobrança, {'{nome_empresa}'} é o
+          Variáveis: {'{nome_empresa} {cidade} {categoria} {nota} {avaliacoes} {responsavel} {valor} {vencimento} {chave_pix}'}. Na cobrança, {'{nome_empresa}'} é o
           nome do seu negócio e {'{responsavel}'} o contato do cliente.
         </p>
         <Templates templates={(templates ?? []) as MessageTemplate[]} />

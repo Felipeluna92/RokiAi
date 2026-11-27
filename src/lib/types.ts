@@ -25,6 +25,9 @@ export type Lead = {
   next_contact_at: string | null
   lost_reason: string | null
   contacted_at: string | null
+  rating: number | null
+  ratings_count: number | null
+  potential_score: number | null
   created_at: string
   updated_at: string
 }

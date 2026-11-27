@@ -80,7 +80,41 @@ export async function marksForAction(placeIds: string[]): Promise<Record<string,
   return out
 }
 
-export type SaveItem = { placeId: string; name: string; phone: { digits: string; isMobile: boolean } | null }
+export type SaveItem = {
+  placeId: string
+  name: string
+  phone: { digits: string; isMobile: boolean } | null
+  rating?: number | null
+  ratingsCount?: number | null
+  score?: number | null
+}
+
+type Stats = Pick<SaveItem, 'placeId' | 'rating' | 'ratingsCount' | 'score'>
+
+/** Valida os números que vêm do navegador antes de gravar. */
+function cleanStats(i: Stats) {
+  const rating = typeof i.rating === 'number' && i.rating >= 0 && i.rating <= 5 ? Math.round(i.rating * 10) / 10 : null
+  const ratings_count = typeof i.ratingsCount === 'number' && i.ratingsCount >= 0 ? Math.floor(i.ratingsCount) : null
+  const potential_score = typeof i.score === 'number' && i.score >= 0 && i.score <= 100 ? Math.round(i.score) : null
+  return { rating, ratings_count, potential_score }
+}
+
+/** Atualiza estrelas/avaliações/potencial dos leads que reapareceram numa busca. */
+export async function refreshLeadStatsAction(items: Stats[]) {
+  if (!items.length) return
+  const { supabase } = await requireUser()
+  const { data: leads } = await supabase
+    .from('leads')
+    .select('id, google_place_id')
+    .in('google_place_id', items.map((i) => i.placeId))
+  const byPlace = new Map(items.map((i) => [i.placeId, i]))
+  await Promise.all(
+    (leads ?? []).map((l) => {
+      const it = byPlace.get(l.google_place_id!)
+      return it ? supabase.from('leads').update(cleanStats(it)).eq('id', l.id) : null
+    }),
+  )
+}
 
 export async function saveLeadsAction(items: SaveItem[], city: string, category: string): Promise<{ saved: number }> {
   const { supabase } = await requireUser()
@@ -93,6 +127,7 @@ export async function saveLeadsAction(items: SaveItem[], city: string, category:
     city: city.trim() || null,
     category: category.trim() || null,
     source: 'google' as const,
+    ...cleanStats(i),
   }))
   const { data, error } = await supabase
     .from('leads')

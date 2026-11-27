@@ -69,3 +69,38 @@ test('salvar, ignorar e marcar resultados', async ({ page }) => {
   await page.reload()
   await expect(page.getByTestId('prospect-card').filter({ hasText: 'Barbearia Alfa' }).getByText('Lead · Novo')).toBeVisible()
 })
+
+test('leads mostram estrelas e vêm ordenados por prioridade', async ({ page }) => {
+  await login(page)
+  await page.evaluate(
+    (s) => sessionStorage.setItem('rokiai:prospect', JSON.stringify(s)),
+    {
+      city: 'Campinas, SP',
+      category: 'Barbearia',
+      results: [
+        fake('e2e-low', 'Barbearia Baixa', { rating: 3.9, ratingsCount: 8, score: 30, tier: 'baixo' }),
+        fake('e2e-high', 'Barbearia Alta', { rating: 4.9, ratingsCount: 412, score: 95, tier: 'alto' }),
+      ],
+    },
+  )
+  await page.goto('/prospectar')
+  await page.getByLabel('Selecionar todos').check()
+  await page.getByRole('button', { name: /Salvar 2 selecionados/ }).click()
+  await expect(page.getByText('2 leads salvos')).toBeVisible()
+
+  await page.goto('/leads')
+  const rows = page.getByTestId('lead-row')
+  await expect(rows.first()).toContainText('Barbearia Alta')
+  await expect(rows.first()).toContainText('4.9')
+  await expect(rows.first()).toContainText('(412)')
+  await expect(rows.first()).toContainText('Potencial alto')
+  await expect(rows.nth(1)).toContainText('Barbearia Baixa')
+
+  // ordenar por recentes muda a ordem só pela data; por estrelas mantém a Alta primeiro
+  await page.getByLabel('Ordenar por').selectOption('estrelas')
+  await expect(rows.first()).toContainText('Barbearia Alta')
+
+  // detalhe do lead mostra as estrelas
+  await page.getByRole('link', { name: 'Barbearia Alta' }).first().click()
+  await expect(page.getByTestId('lead-rating')).toContainText('4.9')
+})

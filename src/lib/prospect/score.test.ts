@@ -19,3 +19,13 @@ describe('potentialScore', () => {
     expect(potentialScore({ ratingsCount: 0, rating: 4.25, phone: null, siteStatus: 'none' }).score).toBe(20)
   })
 })
+
+import { tierOf } from './score'
+describe('tierOf', () => {
+  it('faixas', () => {
+    expect(tierOf(65)).toBe('alto')
+    expect(tierOf(64)).toBe('medio')
+    expect(tierOf(40)).toBe('medio')
+    expect(tierOf(39)).toBe('baixo')
+  })
+})

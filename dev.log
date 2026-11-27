@@ -1,0 +1,25 @@
+(node:1467) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+> rokiai@0.1.0 dev
+> next dev
+
+(node:1480) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1491) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▲ Next.js 16.4.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.0.2.2:3000
+- Environments: .env.local
+✓ Ready in 285ms
+✓ Running next.config.ts took 39ms
+
+(node:1595) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /login 200 in 833ms (next.js: 530ms, proxy.ts: 101ms, application-code: 202ms)
+ GET / 200 in 1559ms (next.js: 73ms, proxy.ts: 71ms, application-code: 1415ms)
+ POST /login 200 in 2.2s (next.js: 3ms, proxy.ts: 9ms, application-code: 2.2s)
+  └─ ƒ signIn(undefined, {}) in 567ms src/app/login/actions.ts
+ GET /leads 200 in 680ms (next.js: 33ms, proxy.ts: 6ms, application-code: 642ms)
+[?25h

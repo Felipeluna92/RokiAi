@@ -24,6 +24,11 @@ export function potentialScore(i: ScoreInput): { score: number; tier: Tier } {
   const phone = i.phone ? (i.phone.isMobile ? 25 : 10) : 0
   const social = i.siteStatus === 'social' ? 10 : 0
   const score = Math.min(100, Math.round(reviews + ratingPoints(i.rating) + phone + social))
-  const tier: Tier = score >= 65 ? 'alto' : score >= 40 ? 'medio' : 'baixo'
-  return { score, tier }
+  return { score, tier: tierOf(score) }
 }
+
+export function tierOf(score: number): Tier {
+  return score >= 65 ? 'alto' : score >= 40 ? 'medio' : 'baixo'
+}
+
+export const TIER_LABEL: Record<Tier, string> = { alto: 'Potencial alto', medio: 'Potencial médio', baixo: 'Potencial baixo' }

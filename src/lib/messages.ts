@@ -1,4 +1,4 @@
-export const TEMPLATE_VARS = ['nome_empresa', 'cidade', 'categoria', 'responsavel', 'valor', 'vencimento', 'chave_pix'] as const
+export const TEMPLATE_VARS = ['nome_empresa', 'cidade', 'categoria', 'nota', 'avaliacoes', 'responsavel', 'valor', 'vencimento', 'chave_pix'] as const
 export type TemplateVar = (typeof TEMPLATE_VARS)[number]
 export type TemplateKind = 'approach' | 'followup' | 'charge'
 export const TEMPLATE_KIND_LABEL: Record<TemplateKind, string> = {

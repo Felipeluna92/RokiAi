@@ -17,6 +17,7 @@ import {
   ignorePlaceAction,
   marksForAction,
   pollApifyAction,
+  refreshLeadStatsAction,
   saveLeadsAction,
   searchAction,
   type Mark,
@@ -109,6 +110,10 @@ export function ProspectClient({
     setMarks(await marksForAction(results.map((r) => r.placeId)))
   }
 
+  function refreshStats(results: ProspectResult[]) {
+    refreshLeadStatsAction(results.map((r) => ({ placeId: r.placeId, rating: r.rating, ratingsCount: r.ratingsCount, score: r.score }))).catch(() => {})
+  }
+
   // acompanha a busca na Apify até terminar (consulta a cada 5 s)
   useEffect(() => {
     if (!pendingRun) return
@@ -131,6 +136,7 @@ export function ProspectClient({
       } catch {}
       const m = await marksForAction(r.results.map((x) => x.placeId))
       if (!cancelled) setMarks(m)
+      refreshLeadStatsAction(r.results.map((x) => ({ placeId: x.placeId, rating: x.rating, ratingsCount: x.ratingsCount, score: x.score }))).catch(() => {})
       if (r.costUsd != null) setApifyCost((c) => c + r.costUsd!)
       toast.success(`${r.results.length} comércios encontrados${r.costUsd != null ? ` (US$ ${r.costUsd.toFixed(2)})` : ''}`)
     }
@@ -173,6 +179,7 @@ export function ProspectClient({
       const s = { city: city.trim(), category: category.trim(), results: r.results, nextPageToken: r.nextPageToken }
       persist(s)
       await refreshMarks(r.results)
+      refreshStats(r.results)
     })
   }
 
@@ -188,6 +195,7 @@ export function ProspectClient({
       const merged = [...data.results, ...r.results.filter((x) => !seen.has(x.placeId))].sort((a, b) => b.score - a.score)
       persist({ ...data, results: merged, nextPageToken: r.nextPageToken })
       await refreshMarks(merged)
+      refreshStats(r.results)
     } finally {
       setLoadingMore(false)
     }
@@ -196,7 +204,7 @@ export function ProspectClient({
   async function save(items: ProspectResult[]) {
     if (!data || !items.length) return
     const { saved } = await saveLeadsAction(
-      items.map((i) => ({ placeId: i.placeId, name: i.name, phone: i.phone })),
+      items.map((i) => ({ placeId: i.placeId, name: i.name, phone: i.phone, rating: i.rating, ratingsCount: i.ratingsCount, score: i.score })),
       data.city,
       data.category,
     )

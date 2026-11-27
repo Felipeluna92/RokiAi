@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CalendarClock, Plus } from 'lucide-react'
+import { Stars } from '@/components/stars'
 import { PageHeader } from '@/components/page-header'
 import { Badge } from '@/components/ui/badge'
 import { buttonClass } from '@/components/ui/button'
@@ -10,21 +11,34 @@ import { STAGE_LABEL, STAGES, type Stage } from '@/lib/billing/metrics'
 import { formatDate, formatPhoneDigits, todayInSaoPaulo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Lead } from '@/lib/types'
+import { sortLeads, type LeadSort } from '@/lib/leads'
+import { TIER_LABEL, tierOf } from '@/lib/prospect/score'
+import { SortSelect } from './sort-select'
 import { fetchAllPages } from '@/lib/paginate'
 
 export const metadata = { title: 'Leads · RokiAi' }
 
 const STAGE_TONE = { novo: 'blue', contatado: 'yellow', proposta: 'violet', fechado: 'green', perdido: 'gray' } as const
+const TIER_TONE = { alto: 'green', medio: 'yellow', baixo: 'gray' } as const
+
 
 function LeadRow({ lead, today }: { lead: Lead; today: string }) {
   const late = lead.next_contact_at && lead.next_contact_at <= today && !['fechado', 'perdido'].includes(lead.stage)
   return (
-    <Card className="flex flex-col gap-1 p-3">
+    <Card data-testid="lead-row" className="flex flex-col gap-1 p-3">
       <div className="flex items-start justify-between gap-2">
         <Link href={`/leads/${lead.id}`} className="font-medium hover:underline">
           {lead.name}
         </Link>
         <Badge tone={STAGE_TONE[lead.stage]}>{STAGE_LABEL[lead.stage]}</Badge>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Stars rating={lead.rating} count={lead.ratings_count} />
+        {lead.potential_score != null && (
+          <Badge tone={TIER_TONE[tierOf(lead.potential_score)]}>
+            {TIER_LABEL[tierOf(lead.potential_score)]} · {lead.potential_score}
+          </Badge>
+        )}
       </div>
       <p className="text-xs text-zinc-500">
         {[lead.category, lead.city, formatPhoneDigits(lead.phone)].filter(Boolean).join(' · ')}
@@ -42,6 +56,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/leads'>) {
   const sp = await searchParams
   const stage = (typeof sp.stage === 'string' && (STAGES as string[]).includes(sp.stage) ? sp.stage : null) as Stage | null
   const q = typeof sp.q === 'string' ? sp.q.trim().toLowerCase() : ''
+  const sort: LeadSort = sp.sort === 'estrelas' || sp.sort === 'recentes' ? sp.sort : 'prioridade'
   const { supabase } = await requireUser()
   const all = await fetchAllPages<Lead>((from, to) =>
     supabase.from('leads').select('*').order('updated_at', { ascending: false }).order('id').range(from, to),
@@ -50,7 +65,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/leads'>) {
 
   const matches = (l: Lead) =>
     !q || [l.name, l.city, l.category, l.phone].some((v) => v?.toLowerCase().includes(q))
-  const filtered = all.filter(matches)
+  const filtered = sortLeads(all.filter(matches), sort)
   const forToday = all
     .filter((l) => l.next_contact_at && l.next_contact_at <= today && !['fechado', 'perdido'].includes(l.stage))
     .sort((a, b) => a.next_contact_at!.localeCompare(b.next_contact_at!))
@@ -61,6 +76,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/leads'>) {
     const params = new URLSearchParams()
     if (s) params.set('stage', s)
     if (q) params.set('q', q)
+    if (sort !== 'prioridade') params.set('sort', sort)
     return (
       <Link
         key={s ?? 'todos'}
@@ -98,8 +114,12 @@ export default async function LeadsPage({ searchParams }: PageProps<'/leads'>) {
         </section>
       )}
 
+      <div className="mb-3 flex justify-end">
+        <SortSelect value={sort} />
+      </div>
       <form className="mb-3">
         {stage && <input type="hidden" name="stage" value={stage} />}
+        {sort !== 'prioridade' && <input type="hidden" name="sort" value={sort} />}
         <Input name="q" defaultValue={q} placeholder="Buscar por nome, cidade, categoria ou telefone" aria-label="Buscar leads" />
       </form>
 

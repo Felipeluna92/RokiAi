@@ -73,7 +73,15 @@ export function LeadActions({
   lead,
   templates,
 }: {
-  lead: { id: string; phone: string | null; name: string; city: string | null; category: string | null }
+  lead: {
+    id: string
+    phone: string | null
+    name: string
+    city: string | null
+    category: string | null
+    rating: number | null
+    ratings_count: number | null
+  }
   templates: MessageTemplate[]
 }) {
   const router = useRouter()
@@ -81,7 +89,13 @@ export function LeadActions({
     <WhatsAppButton
       digits={lead.phone}
       templates={templates}
-      vars={{ nome_empresa: lead.name, cidade: lead.city, categoria: lead.category }}
+      vars={{
+        nome_empresa: lead.name,
+        cidade: lead.city,
+        categoria: lead.category,
+        nota: lead.rating != null ? Number(lead.rating).toFixed(1).replace('.', ',') : null,
+        avaliacoes: lead.ratings_count,
+      }}
       onSent={async (name) => {
         await logWhatsappAction(lead.id, name)
         router.refresh()
