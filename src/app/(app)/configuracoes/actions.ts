@@ -1,12 +1,13 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth'
+import { parseBRL } from '@/lib/format'
 
 const money = (v: FormDataEntryValue | null) => {
-  const s = String(v ?? '').trim().replace(/\./g, '').replace(',', '.')
+  const s = String(v ?? '').trim()
   if (!s) return null
-  const n = Number(s)
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null
+  const n = parseBRL(s)
+  return Number.isFinite(n) && n >= 0 ? n : null
 }
 
 export async function saveSettingsAction(_prev: { ok?: boolean; error?: string } | undefined, form: FormData) {

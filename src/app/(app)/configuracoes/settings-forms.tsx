@@ -6,6 +6,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input, Label, Textarea } from '@/components/ui/input'
+import { toInputBRL } from '@/lib/format'
 import { TEMPLATE_KIND_LABEL, type TemplateKind } from '@/lib/messages'
 import type { MessageTemplate, Settings } from '@/lib/types'
 import { createTemplateAction, deleteTemplateAction, saveSettingsAction, saveTemplateAction } from './actions'
@@ -28,11 +29,11 @@ export function SettingsForm({ settings }: { settings: Settings }) {
       </div>
       <div>
         <Label htmlFor="default_setup_price">Preço padrão da implantação (R$)</Label>
-        <Input id="default_setup_price" name="default_setup_price" inputMode="decimal" defaultValue={settings.default_setup_price ?? ''} />
+        <Input id="default_setup_price" name="default_setup_price" inputMode="decimal" defaultValue={toInputBRL(settings.default_setup_price)} />
       </div>
       <div>
         <Label htmlFor="default_monthly_price">Mensalidade padrão (R$)</Label>
-        <Input id="default_monthly_price" name="default_monthly_price" inputMode="decimal" defaultValue={settings.default_monthly_price ?? ''} />
+        <Input id="default_monthly_price" name="default_monthly_price" inputMode="decimal" defaultValue={toInputBRL(settings.default_monthly_price)} />
       </div>
       <div>
         <Label htmlFor="google_price_per_request">Custo por busca no Google (US$)</Label>

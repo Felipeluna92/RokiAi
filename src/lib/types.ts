@@ -69,5 +69,6 @@ export type Charge = {
   paid_at: string | null
   method: string
   notes: string | null
+  voided_at: string | null
   created_at: string
 }

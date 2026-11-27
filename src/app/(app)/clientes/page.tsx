@@ -8,6 +8,7 @@ import { requireUser } from '@/lib/auth'
 import { formatBRL, formatPhoneDigits, todayInSaoPaulo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Client } from '@/lib/types'
+import { fetchAllPages } from '@/lib/paginate'
 
 export const metadata = { title: 'Clientes · RokiAi' }
 
@@ -16,12 +17,14 @@ export default async function ClientsPage({ searchParams }: PageProps<'/clientes
   const view = sp.status === 'canceled' ? 'canceled' : 'active'
   const { supabase } = await requireUser()
   const today = todayInSaoPaulo()
-  const [{ data: clients }, { data: overdue }] = await Promise.all([
+  const [{ data: clients }, overdue] = await Promise.all([
     supabase.from('clients').select('*').order('company'),
-    supabase.from('charges').select('client_id').is('paid_at', null).lt('due_date', today),
+    fetchAllPages<{ client_id: string }>((from, to) =>
+      supabase.from('charges').select('client_id').is('paid_at', null).is('voided_at', null).lt('due_date', today).order('id').range(from, to),
+    ),
   ])
   const all = (clients ?? []) as Client[]
-  const debtors = new Set((overdue ?? []).map((c) => c.client_id))
+  const debtors = new Set(overdue.map((c) => c.client_id))
   const list = all.filter((c) => c.status === view)
   const activeCount = all.filter((c) => c.status === 'active').length
 

@@ -4,17 +4,12 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth'
 import { buildSetupCharges } from '@/lib/billing/charges'
 import { ensureMonthlyCharges } from '@/lib/billing/ensure'
-import { todayInSaoPaulo } from '@/lib/format'
+import { parseBRL, todayInSaoPaulo } from '@/lib/format'
 import { normalizePhone } from '@/lib/prospect/phone'
 
 export type ClientFormState = { error?: string } | undefined
 
-const num = (v: FormDataEntryValue | null) => {
-  const s = String(v ?? '').trim().replace(/\./g, '').replace(',', '.')
-  if (!s) return 0
-  const n = Number(s)
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN
-}
+const num = (v: FormDataEntryValue | null) => parseBRL(String(v ?? ''))
 const str = (v: FormDataEntryValue | null) => String(v ?? '').trim() || null
 const isDate = (s: string | null) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s)
 
@@ -66,8 +61,17 @@ export async function createClientAction(_prev: ClientFormState, form: FormData)
   if (error) return { error: 'Não foi possível salvar o cliente.' }
 
   const setup = plan.setup_total > 0 ? buildSetupCharges(plan.setup_total, plan.setup_installments, plan.setup_first!) : []
-  if (setup.length) await supabase.from('charges').insert(setup.map((c) => ({ ...c, client_id: client.id })))
-  await ensureMonthlyCharges(supabase, todayInSaoPaulo(), client.id)
+  try {
+    if (setup.length) {
+      const { error: setupErr } = await supabase.from('charges').insert(setup.map((c) => ({ ...c, client_id: client.id })))
+      if (setupErr) throw new Error(setupErr.message)
+    }
+    await ensureMonthlyCharges(supabase, todayInSaoPaulo(), client.id)
+  } catch {
+    // desfaz para não deixar cliente sem cobranças (e evitar duplicata ao reenviar)
+    await supabase.from('clients').delete().eq('id', client.id)
+    return { error: 'Não foi possível gerar as cobranças. Nada foi salvo; tente de novo.' }
+  }
 
   if (leadId) {
     const { data: lead } = await supabase.from('leads').select('stage, contacted_at').eq('id', leadId).maybeSingle()
@@ -120,18 +124,28 @@ export async function updateClientAction(id: string, _prev: ClientFormState, for
 export async function cancelClientAction(id: string, date: string) {
   const { supabase } = await requireUser()
   if (!isDate(date)) return { error: 'Data inválida' }
-  await supabase.from('clients').update({ status: 'canceled', canceled_at: date }).eq('id', id)
+  const { error } = await supabase.from('clients').update({ status: 'canceled', canceled_at: date }).eq('id', id)
+  if (error) return { error: 'Não foi possível cancelar' }
   await supabase.from('charges').delete().eq('client_id', id).eq('type', 'monthly').is('paid_at', null).gt('due_date', date)
   revalidatePath(`/clientes/${id}`)
   revalidatePath('/clientes')
   return {}
 }
 
-export async function reactivateClientAction(id: string) {
+/** Reativa e retoma a cobrança a partir de `date` (meses em que ficou cancelado não são cobrados). */
+export async function reactivateClientAction(id: string, date: string) {
   const { supabase } = await requireUser()
-  await supabase.from('clients').update({ status: 'active', canceled_at: null }).eq('id', id)
+  if (!isDate(date)) return { error: 'Data inválida' }
+  const { data: c } = await supabase.from('clients').select('monthly_fee').eq('id', id).maybeSingle()
+  if (!c) return { error: 'Cliente não encontrado' }
+  const patch: Record<string, unknown> = { status: 'active', canceled_at: null }
+  if (Number(c.monthly_fee) > 0) patch.start_date = date
+  const { error } = await supabase.from('clients').update(patch).eq('id', id)
+  if (error) return { error: 'Não foi possível reativar' }
   await ensureMonthlyCharges(supabase, todayInSaoPaulo(), id)
   revalidatePath(`/clientes/${id}`)
+  revalidatePath('/clientes')
+  return {}
 }
 
 export async function deleteClientAction(id: string) {

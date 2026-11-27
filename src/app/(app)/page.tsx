@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { AlertTriangle, ArrowRight } from 'lucide-react'
-import { ChargeRow, type ChargeWithClient } from '@/components/charge-row'
+import { ChargeRow } from '@/components/charge-row'
+import { fetchAllPages } from '@/lib/paginate'
 import { MrrChart, RevenueChart } from '@/components/dashboard/charts'
 import { PageHeader } from '@/components/page-header'
 import { buttonClass } from '@/components/ui/button'
 import { Card, CardTitle } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
-import { CHARGE_SELECT, billingContext } from '@/lib/billing/context'
+import { billingContext, fetchCharges } from '@/lib/billing/context'
 import { ensureMonthlyCharges } from '@/lib/billing/ensure'
 import { STAGE_LABEL, STAGES, dashboardMetrics, funnelStats, mrrHistory, revenueByMonth, type Stage } from '@/lib/billing/metrics'
 import { chargeStatus } from '@/lib/billing/status'
@@ -29,13 +30,14 @@ export default async function DashboardPage() {
   const { supabase } = await requireUser()
   const today = todayInSaoPaulo()
   await ensureMonthlyCharges(supabase, today)
-  const [{ data: clients }, { data: charges }, { data: leads }, ctx] = await Promise.all([
+  const [{ data: clients }, allCharges, leads, ctx] = await Promise.all([
     supabase.from('clients').select('monthly_fee, status, created_at'),
-    supabase.from('charges').select(CHARGE_SELECT).order('due_date'),
-    supabase.from('leads').select('stage, contacted_at'),
+    fetchCharges(supabase),
+    fetchAllPages<{ stage: Stage; contacted_at: string | null }>((from, to) =>
+      supabase.from('leads').select('stage, contacted_at').order('id').range(from, to),
+    ),
     billingContext(supabase),
   ])
-  const allCharges = (charges ?? []) as ChargeWithClient[]
   const rows = allCharges.map((c) => ({ ...c, amount: Number(c.amount) }))
   const m = dashboardMetrics(
     (clients ?? []).map((c) => ({ ...c, monthly_fee: Number(c.monthly_fee) })),
@@ -44,7 +46,7 @@ export default async function DashboardPage() {
   )
   const revenue = revenueByMonth(rows, today)
   const mrr = mrrHistory(rows, today)
-  const funnel = funnelStats((leads ?? []) as { stage: Stage; contacted_at: string | null }[])
+  const funnel = funnelStats(leads)
   const weekAhead = new Date(`${today}T12:00:00Z`)
   weekAhead.setUTCDate(weekAhead.getUTCDate() + 7)
   const limit = weekAhead.toISOString().slice(0, 10)

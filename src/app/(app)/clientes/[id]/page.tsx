@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
-import { ChargeRow, type ChargeWithClient } from '@/components/charge-row'
+import { ChargeRow } from '@/components/charge-row'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardTitle } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
-import { CHARGE_SELECT, billingContext } from '@/lib/billing/context'
+import { billingContext, fetchCharges } from '@/lib/billing/context'
 import { ensureMonthlyCharges } from '@/lib/billing/ensure'
 import { formatBRL, formatDate, formatPhoneDigits, todayInSaoPaulo } from '@/lib/format'
 import type { Client } from '@/lib/types'
@@ -16,14 +16,13 @@ export default async function ClientPage({ params }: PageProps<'/clientes/[id]'>
   const { supabase } = await requireUser()
   const today = todayInSaoPaulo()
   await ensureMonthlyCharges(supabase, today, id)
-  const [{ data: client }, { data: charges }, ctx] = await Promise.all([
+  const [{ data: client }, list, ctx] = await Promise.all([
     supabase.from('clients').select('*').eq('id', id).maybeSingle(),
-    supabase.from('charges').select(CHARGE_SELECT).eq('client_id', id).order('due_date', { ascending: false }),
+    fetchCharges(supabase, { clientId: id, ascending: false }),
     billingContext(supabase),
   ])
   if (!client) notFound()
   const c = client as Client
-  const list = (charges ?? []) as ChargeWithClient[]
   const paid = list.filter((x) => x.paid_at).reduce((s, x) => s + Number(x.amount), 0)
   const open = list.filter((x) => !x.paid_at).reduce((s, x) => s + Number(x.amount), 0)
 

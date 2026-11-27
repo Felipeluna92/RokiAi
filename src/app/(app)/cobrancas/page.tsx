@@ -3,7 +3,7 @@ import { ChargeRow, type ChargeWithClient } from '@/components/charge-row'
 import { PageHeader } from '@/components/page-header'
 import { Card } from '@/components/ui/card'
 import { requireUser } from '@/lib/auth'
-import { CHARGE_SELECT, billingContext } from '@/lib/billing/context'
+import { billingContext, fetchCharges } from '@/lib/billing/context'
 import { ensureMonthlyCharges } from '@/lib/billing/ensure'
 import { chargeStatus } from '@/lib/billing/status'
 import { formatBRL, monthKey, todayInSaoPaulo } from '@/lib/format'
@@ -25,11 +25,7 @@ export default async function ChargesPage({ searchParams }: PageProps<'/cobranca
   const { supabase } = await requireUser()
   const today = todayInSaoPaulo()
   await ensureMonthlyCharges(supabase, today)
-  const [{ data }, ctx] = await Promise.all([
-    supabase.from('charges').select(CHARGE_SELECT).order('due_date', { ascending: true }),
-    billingContext(supabase),
-  ])
-  const all = (data ?? []) as ChargeWithClient[]
+  const [all, ctx] = await Promise.all([fetchCharges(supabase), billingContext(supabase)])
   const month = monthKey(today)
 
   const groups: Record<Tab, ChargeWithClient[]> = {

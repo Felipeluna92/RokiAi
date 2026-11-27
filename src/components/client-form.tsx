@@ -3,7 +3,7 @@ import { useActionState, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input, Label, Textarea } from '@/components/ui/input'
 import { monthlyChargesToEnsure } from '@/lib/billing/charges'
-import { formatPhoneDigits } from '@/lib/format'
+import { formatPhoneDigits, parseBRL, toInputBRL } from '@/lib/format'
 import type { ClientFormState } from '@/app/(app)/clientes/actions'
 
 type Defaults = {
@@ -34,12 +34,12 @@ export function ClientForm({
   mode: 'create' | 'edit'
 }) {
   const [state, formAction, pending] = useActionState(action, undefined)
-  const [monthly, setMonthly] = useState(defaults.monthly_fee ? String(defaults.monthly_fee) : '')
+  const [monthly, setMonthly] = useState(defaults.monthly_fee ? toInputBRL(defaults.monthly_fee) : '')
   const [dueDay, setDueDay] = useState(String(defaults.due_day ?? Math.min(28, Number(today.slice(8)))))
   const [start, setStart] = useState(defaults.start_date ?? today)
 
   const pastCount = useMemo(() => {
-    const fee = Number(monthly.replace(',', '.'))
+    const fee = parseBRL(monthly)
     const day = Number(dueDay)
     if (mode !== 'create' || !(fee > 0) || !(day >= 1 && day <= 28) || !/^\d{4}-\d{2}-\d{2}$/.test(start)) return 0
     return monthlyChargesToEnsure({ monthly_fee: fee, due_day: day, start_date: start, status: 'active', canceled_at: null }, today).filter(
@@ -83,7 +83,7 @@ export function ClientForm({
           <legend className="mb-2 text-sm font-semibold">Implantação (criação do site)</legend>
           <div>
             <Label htmlFor="setup_total">Valor da implantação</Label>
-            <Input id="setup_total" name="setup_total" inputMode="decimal" defaultValue={defaults.setup_total ?? ''} placeholder="0,00" />
+            <Input id="setup_total" name="setup_total" inputMode="decimal" defaultValue={toInputBRL(defaults.setup_total)} placeholder="0,00" />
           </div>
           <div>
             <Label htmlFor="setup_installments">Parcelas</Label>

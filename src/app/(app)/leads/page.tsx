@@ -10,6 +10,7 @@ import { STAGE_LABEL, STAGES, type Stage } from '@/lib/billing/metrics'
 import { formatDate, formatPhoneDigits, todayInSaoPaulo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Lead } from '@/lib/types'
+import { fetchAllPages } from '@/lib/paginate'
 
 export const metadata = { title: 'Leads · RokiAi' }
 
@@ -42,8 +43,9 @@ export default async function LeadsPage({ searchParams }: PageProps<'/leads'>) {
   const stage = (typeof sp.stage === 'string' && (STAGES as string[]).includes(sp.stage) ? sp.stage : null) as Stage | null
   const q = typeof sp.q === 'string' ? sp.q.trim().toLowerCase() : ''
   const { supabase } = await requireUser()
-  const { data } = await supabase.from('leads').select('*').order('updated_at', { ascending: false })
-  const all = (data ?? []) as Lead[]
+  const all = await fetchAllPages<Lead>((from, to) =>
+    supabase.from('leads').select('*').order('updated_at', { ascending: false }).order('id').range(from, to),
+  )
   const today = todayInSaoPaulo()
 
   const matches = (l: Lead) =>

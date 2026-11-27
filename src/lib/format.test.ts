@@ -25,3 +25,31 @@ describe('formatPhoneDigits', () => {
   })
   it('vazio', () => expect(formatPhoneDigits(null)).toBe(''))
 })
+
+import { parseBRL, toInputBRL } from './format'
+describe('parseBRL', () => {
+  it.each([
+    ['149.9', 149.9],
+    ['149,90', 149.9],
+    ['1.500', 1500],
+    ['1.500,50', 1500.5],
+    ['150.5', 150.5],
+    ['150.50', 150.5],
+    ['R$ 2.000,00', 2000],
+    ['1500', 1500],
+    ['12.345.678', 12345678],
+    ['0', 0],
+  ])('%s → %d', (input, expected) => expect(parseBRL(input)).toBe(expected))
+  it('vazio → 0', () => expect(parseBRL('')).toBe(0))
+  it('inválido → NaN', () => {
+    expect(parseBRL('abc')).toBeNaN()
+    expect(parseBRL('1,2,3')).toBeNaN()
+  })
+})
+describe('toInputBRL', () => {
+  it('formata para campo de texto', () => {
+    expect(toInputBRL(149.9)).toBe('149,90')
+    expect(toInputBRL(1500)).toBe('1500,00')
+    expect(toInputBRL(null)).toBe('')
+  })
+})

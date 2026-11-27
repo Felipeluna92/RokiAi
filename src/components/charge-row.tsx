@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Check, MoreVertical, Pencil, Trash2, Undo2 } from 'lucide-react'
 import { Badge, type Tone } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { Input, Label, Textarea } from '@/components/ui/input'
 import { WhatsAppButton } from '@/components/whatsapp-button'
 import { STATUS_LABEL, chargeStatus, type ChargeStatus } from '@/lib/billing/status'
-import { formatBRL, formatDate } from '@/lib/format'
+import { formatBRL, formatDate, parseBRL, toInputBRL } from '@/lib/format'
 import type { Charge, MessageTemplate } from '@/lib/types'
 import { deleteChargeAction, markPaidAction, unmarkPaidAction, updateChargeAction } from '@/app/(app)/cobrancas/actions'
 
@@ -40,7 +41,7 @@ export function ChargeRow({
   const [editOpen, setEditOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [payDate, setPayDate] = useState(today)
-  const [amount, setAmount] = useState(String(charge.amount))
+  const [amount, setAmount] = useState(toInputBRL(charge.amount))
   const [due, setDue] = useState(charge.due_date)
   const [notes, setNotes] = useState(charge.notes ?? '')
   const [err, setErr] = useState('')
@@ -48,7 +49,8 @@ export function ChargeRow({
 
   const run = (fn: () => Promise<unknown>) =>
     start(async () => {
-      await fn()
+      const r = (await fn()) as { error?: string } | void
+      if (r && r.error) toast.error(r.error)
       router.refresh()
     })
 
@@ -133,8 +135,9 @@ export function ChargeRow({
             disabled={pending}
             onClick={() =>
               run(async () => {
-                await markPaidAction(charge.id, payDate)
-                setPayOpen(false)
+                const r = await markPaidAction(charge.id, payDate)
+                if (!r?.error) setPayOpen(false)
+                return r
               })
             }
           >
@@ -163,8 +166,8 @@ export function ChargeRow({
             disabled={pending}
             onClick={() =>
               run(async () => {
-                const r = await updateChargeAction(charge.id, { amount: Number(amount.replace(',', '.')), due_date: due, notes })
-                if (r?.error) return setErr(r.error)
+                const r = await updateChargeAction(charge.id, { amount: parseBRL(amount), due_date: due, notes })
+                if (r?.error) return void setErr(r.error)
                 setEditOpen(false)
               })
             }
